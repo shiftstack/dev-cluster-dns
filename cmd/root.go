@@ -37,7 +37,7 @@ var (
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "cluster-dns",
+	Use:   "dev-cluster-dns",
 	Short: "Manage DNS records for an OpenShift cluster in an existing Route 53 Hosted Zone",
 }
 
@@ -53,7 +53,7 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.cluster-dns.yaml)")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.dev-cluster-dns.yaml)")
 
 	rootCmd.PersistentFlags().StringVar(&hostedZoneID, "hosted-zone", shiftStackDevHostedZone, "ID of the HostedZone where records will be created")
 	viper.BindPFlag("hosted-zone", rootCmd.Flags().Lookup("hosted-zone"))
@@ -72,10 +72,10 @@ func initConfig() {
 		home, err := os.UserHomeDir()
 		cobra.CheckErr(err)
 
-		// Search config in home directory with name ".cluster-dns" (without extension).
+		// Search config in home directory with name ".dev-cluster-dns" (without extension).
 		viper.AddConfigPath(home)
 		viper.SetConfigType("toml")
-		viper.SetConfigName(".cluster-dns")
+		viper.SetConfigName(".dev-cluster-dns")
 	}
 
 	viper.AutomaticEnv() // read in environment variables that match

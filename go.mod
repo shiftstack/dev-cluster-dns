@@ -1,4 +1,4 @@
-module github.com/shiftstack/cluster-dns
+module github.com/shiftstack/dev-cluster-dns
 
 go 1.22.2
 

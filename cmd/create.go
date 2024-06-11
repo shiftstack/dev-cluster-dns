@@ -27,7 +27,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/route53/types"
 	"github.com/spf13/cobra"
 
-	"github.com/shiftstack/cluster-dns/internal/client"
+	"github.com/shiftstack/dev-cluster-dns/internal/client"
 )
 
 var (
