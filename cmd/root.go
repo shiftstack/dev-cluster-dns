@@ -17,32 +17,28 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 package cmd
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 const (
 	shiftStackDevHostedZone = "Z0400818H9HMCRQLQP0V"
+	defaultAWSProfile       = "saml"
 )
 
 var (
-	hostedZone string
+	cfgFile      string
+	hostedZoneID string
+	awsProfile   string
 )
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "cluster-dns",
-	Short: "A brief description of your application",
-	Long: `A longer description that spans multiple lines and likely contains
-examples and usage of using your application. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
-	// Uncomment the following line if your bare application
-	// has an action associated with it:
-	// Run: func(cmd *cobra.Command, args []string) { },
+	Short: "Manage DNS records for an OpenShift cluster in an existing Route 53 Hosted Zone",
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -55,5 +51,37 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVar(&hostedZone, "hosted-zone", shiftStackDevHostedZone, "ID of the HostedZone where records will be created")
+	cobra.OnInitialize(initConfig)
+
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.cluster-dns.yaml)")
+
+	rootCmd.PersistentFlags().StringVar(&hostedZoneID, "hosted-zone", shiftStackDevHostedZone, "ID of the HostedZone where records will be created")
+	viper.BindPFlag("hosted-zone", rootCmd.Flags().Lookup("hosted-zone"))
+
+	rootCmd.PersistentFlags().StringVar(&awsProfile, "aws-profile", defaultAWSProfile, "AWS credentials profile to read from")
+}
+
+// initConfig reads in config file and ENV variables if set.
+func initConfig() {
+	// XXX(mdbooth): viper integration does not appear to be working
+	if cfgFile != "" {
+		// Use config file from the flag.
+		viper.SetConfigFile(cfgFile)
+	} else {
+		// Find home directory.
+		home, err := os.UserHomeDir()
+		cobra.CheckErr(err)
+
+		// Search config in home directory with name ".cluster-dns" (without extension).
+		viper.AddConfigPath(home)
+		viper.SetConfigType("toml")
+		viper.SetConfigName(".cluster-dns")
+	}
+
+	viper.AutomaticEnv() // read in environment variables that match
+
+	// If a config file is found, read it in.
+	if err := viper.ReadInConfig(); err == nil {
+		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
+	}
 }

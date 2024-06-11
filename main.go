@@ -16,7 +16,7 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 package main
 
-import "github.com/shiftstack/shiftstack-dev-tools/cluster-dns/cmd"
+import "github.com/shiftstack/cluster-dns/cmd"
 
 func main() {
 	cmd.Execute()

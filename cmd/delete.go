@@ -17,36 +17,101 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 package cmd
 
 import (
-	"fmt"
+	"context"
+	"log"
+	"strings"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/route53"
+	"github.com/aws/aws-sdk-go-v2/service/route53/types"
 	"github.com/spf13/cobra"
+
+	"github.com/shiftstack/cluster-dns/internal/client"
 )
 
 // deleteCmd represents the delete command
 var deleteCmd = &cobra.Command{
-	Use:   "delete",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Use:   "delete <cluster name>",
+	Short: "Delete records for a cluster",
+	Args:  cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("delete called")
+		ctx := context.TODO()
+
+		client, err := client.GetRoute53Client(ctx, awsProfile)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		err = deleteClusterRecords(ctx, client, hostedZoneID, args[0])
+		if err != nil {
+			log.Fatal(err)
+		}
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(deleteCmd)
+}
 
-	// Here you will define your flags and configuration settings.
+func deleteClusterRecords(ctx context.Context, client *route53.Client, hostedZoneID, clusterName string) error {
+	recordsListOpts := &route53.ListResourceRecordSetsInput{
+		HostedZoneId: &hostedZoneID,
+	}
 
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// deleteCmd.PersistentFlags().String("foo", "", "A help for foo")
+	var deleteRRS []*types.ResourceRecordSet
+	var deleteNames []string
 
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// deleteCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	for {
+		records, err := client.ListResourceRecordSets(ctx, recordsListOpts)
+		if err != nil {
+			return err
+		}
+
+		for i := range records.ResourceRecordSets {
+			rrs := &records.ResourceRecordSets[i]
+			name := aws.ToString(rrs.Name)
+
+			// Wildcard becomes "\052"
+			if strings.HasPrefix(name, "api."+clusterName+".") || strings.HasPrefix(name, "\\052.apps."+clusterName+".") {
+				deleteRRS = append(deleteRRS, rrs)
+				deleteNames = append(deleteNames, name)
+			}
+		}
+
+		if !records.IsTruncated {
+			break
+		}
+		recordsListOpts.StartRecordIdentifier = records.NextRecordIdentifier
+		recordsListOpts.StartRecordName = records.NextRecordName
+		recordsListOpts.StartRecordType = records.NextRecordType
+	}
+
+	if len(deleteRRS) == 0 {
+		log.Printf("No records found")
+		return nil
+	}
+
+	change := route53.ChangeResourceRecordSetsInput{
+		ChangeBatch: &types.ChangeBatch{
+			Changes: []types.Change{},
+			Comment: aws.String("Delete records for cluster " + clusterName),
+		},
+		HostedZoneId: &hostedZoneID,
+	}
+
+	for _, rrs := range deleteRRS {
+		change.ChangeBatch.Changes = append(change.ChangeBatch.Changes, types.Change{
+			Action:            types.ChangeActionDelete,
+			ResourceRecordSet: rrs,
+		})
+	}
+
+	_, err := client.ChangeResourceRecordSets(ctx, &change)
+	if err != nil {
+		return err
+	}
+
+	log.Printf("Deleted: %s", strings.Join(deleteNames, " "))
+
+	return nil
 }
