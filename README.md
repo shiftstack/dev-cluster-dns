@@ -1,5 +1,7 @@
 # dev-cluster-dns
 
+## Use
+
 Creates and deletes DNS records for an OpenShift cluster in AWS route 53. Specifically it creates:
 
 - api.&lt;_cluster name_&gt;.&lt;_hosted zone_&gt;
@@ -7,7 +9,7 @@ Creates and deletes DNS records for an OpenShift cluster in AWS route 53. Specif
 
 By default it uses zone `Z0400818H9HMCRQLQP0V`, which is `shiftstack-dev.devcluster.openshift.com`. This can be overridden with the `--hosted-zone` option.
 
-## Create records
+### Create records
 
 ```
 $ dev-cluster-dns create my-cluster --api 192.0.2.1 --ingress 192.0.2.2
@@ -24,9 +26,13 @@ The default TTL for the records is 60 seconds. It can be changed with the `--ttl
 
 `create` will also update existing records.
 
-## Delete records
+### Delete records
 
 ```
 $ dev-cluster-dns delete my-cluster
 2024/06/11 14:28:00 Deleted: api.my-cluster.shiftstack-dev.devcluster.openshift.com. \052.apps.my-cluster.shiftstack-dev.devcluster.openshift.com.
 ```
+
+## Building
+
+This repo is configured to automatically generate a release whenever a tag is pushed. To create a new release, simply push a new tag.
