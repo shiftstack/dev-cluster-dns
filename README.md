@@ -1,6 +1,6 @@
 # dev-cluster-dns
 
-## Use
+## Usage
 
 Creates and deletes DNS records for an OpenShift cluster in AWS route 53. Specifically it creates:
 
@@ -25,6 +25,16 @@ Note that the status is `PENDING`, meaning that the records are not published ye
 The default TTL for the records is 60 seconds. It can be changed with the `--ttl` flag.
 
 `create` will also update existing records.
+
+### List records
+
+```
+$ dev-cluster-dns list
+name: api.my-cluster.shiftstack-dev.devcluster.openshift.com.
+        value: 192.0.2.1
+name: *.apps.my-cluster.shiftstack-dev.devcluster.openshift.com.
+        value: 192.0.2.2
+```
 
 ### Delete records
 
