@@ -94,7 +94,7 @@ func createClusterRecordsFromInstallConfig(ctx context.Context, client *route53.
 
 		// TODO: Support other zones. This will require a lookup.
 		if hostedZoneID != shiftStackDevHostedZone {
-			log.Fatal("Only the defualt hosted zone is currently supported")
+			log.Fatal("Only the default hosted zone is currently supported")
 		}
 
 		if installConfig.BaseDomain != "shiftstack-dev.devcluster.openshift.com" {
