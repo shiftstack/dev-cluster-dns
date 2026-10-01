@@ -37,6 +37,7 @@ var (
 type CreateClusterRecordsOpts struct {
 	APIIP       string
 	IngressIP   string
+	Host        string
 	TTL         int64
 	WaitSeconds int64
 }
@@ -47,7 +48,8 @@ var createCmd = &cobra.Command{
 	Short: "Create or update records for a cluster",
 	Long: `Create or update DNS records for an OpenShift cluster in an existing HostedZone.
 
-$ dev-cluster-dns create my-cluster --api 1.2.3.4 --ingress 1.2.3.5`,
+$ dev-cluster-dns create my-cluster --api 1.2.3.4 --ingress 1.2.3.5
+$ dev-cluster-dns create my-cluster --host my-host.example.com`,
 	Args: cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := context.TODO()
@@ -69,7 +71,10 @@ func init() {
 
 	createCmd.Flags().StringVar(&createClusterRecordsOpts.APIIP, "api", "", "IP address of the api server endpoint")
 	createCmd.Flags().StringVar(&createClusterRecordsOpts.IngressIP, "ingress", "", "IP address of the ingress endpoint")
-	createCmd.MarkFlagsOneRequired("api", "ingress")
+	createCmd.Flags().StringVar(&createClusterRecordsOpts.Host, "host", "", "Target hostname for CNAME records")
+	createCmd.MarkFlagsOneRequired("api", "ingress", "host")
+	createCmd.MarkFlagsMutuallyExclusive("host", "api")
+	createCmd.MarkFlagsMutuallyExclusive("host", "ingress")
 
 	createCmd.Flags().Int64Var(&createClusterRecordsOpts.TTL, "ttl", 60, "TTL of created records, in seconds")
 	createCmd.Flags().Int64Var(&createClusterRecordsOpts.WaitSeconds, "wait", 0, "Seconds to wait for records to be active. Set to zero to disable waiting")
@@ -95,16 +100,24 @@ func createClusterRecords(ctx context.Context, client *route53.Client, hostedZon
 	}
 
 	var records []string
-	if opts.APIIP != "" {
-		name := "api." + clusterName + "." + baseDomain
-		records = append(records, name)
-		change.ChangeBatch.Changes = append(change.ChangeBatch.Changes, genClusterRecord(name, opts.TTL, opts.APIIP))
-	}
+	if opts.Host != "" {
+		for _, prefix := range []string{"api.", "api-int.", "*.apps."} {
+			name := prefix + clusterName + "." + baseDomain
+			records = append(records, name)
+			change.ChangeBatch.Changes = append(change.ChangeBatch.Changes, genClusterRecord(name, types.RRTypeCname, opts.TTL, opts.Host))
+		}
+	} else {
+		if opts.APIIP != "" {
+			name := "api." + clusterName + "." + baseDomain
+			records = append(records, name)
+			change.ChangeBatch.Changes = append(change.ChangeBatch.Changes, genClusterRecord(name, types.RRTypeA, opts.TTL, opts.APIIP))
+		}
 
-	if opts.IngressIP != "" {
-		name := "*.apps." + clusterName + "." + baseDomain
-		records = append(records, name)
-		change.ChangeBatch.Changes = append(change.ChangeBatch.Changes, genClusterRecord(name, opts.TTL, opts.IngressIP))
+		if opts.IngressIP != "" {
+			name := "*.apps." + clusterName + "." + baseDomain
+			records = append(records, name)
+			change.ChangeBatch.Changes = append(change.ChangeBatch.Changes, genClusterRecord(name, types.RRTypeA, opts.TTL, opts.IngressIP))
+		}
 	}
 
 	log.Printf("Create or update records: %s", strings.Join(records, " "))
@@ -133,19 +146,18 @@ func createClusterRecords(ctx context.Context, client *route53.Client, hostedZon
 	return nil
 }
 
-func genClusterRecord(name string, ttl int64, ip string) types.Change {
+func genClusterRecord(name string, rrType types.RRType, ttl int64, target string) types.Change {
 	return types.Change{
 		Action: types.ChangeActionUpsert,
 		ResourceRecordSet: &types.ResourceRecordSet{
 			Name: &name,
-			Type: types.RRTypeA,
+			Type: rrType,
 			TTL:  &ttl,
 			ResourceRecords: []types.ResourceRecord{
 				{
-					Value: &ip,
+					Value: &target,
 				},
 			},
 		},
 	}
-
 }

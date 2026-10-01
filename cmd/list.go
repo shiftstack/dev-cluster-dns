@@ -69,7 +69,7 @@ func listClusterRecords(ctx context.Context, client *route53.Client, hostedZoneI
 		// The wildcard is ASCII encoded
 		// https://github.com/fog/fog/issues/1093
 		name = strings.Replace(name, "\\052", "*", 1)
-		if strings.HasPrefix(name, "api.") || strings.HasPrefix(name, "*.apps.") {
+		if strings.HasPrefix(name, "api.") || strings.HasPrefix(name, "api-int.") || strings.HasPrefix(name, "*.apps.") {
 			fmt.Printf("name: %s\n", name)
 			for _, resourceRecord := range resourceRecordSet.ResourceRecords {
 				fmt.Printf("\tvalue: %s\n", *resourceRecord.Value)
