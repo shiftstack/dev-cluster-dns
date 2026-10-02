@@ -72,7 +72,7 @@ func deleteClusterRecords(ctx context.Context, client *route53.Client, hostedZon
 			name := aws.ToString(rrs.Name)
 
 			// Wildcard becomes "\052"
-			if strings.HasPrefix(name, "api."+clusterName+".") || strings.HasPrefix(name, "\\052.apps."+clusterName+".") {
+			if strings.HasPrefix(name, "api."+clusterName+".") || strings.HasPrefix(name, "api-int."+clusterName+".") || strings.HasPrefix(name, "\\052.apps."+clusterName+".") {
 				deleteRRS = append(deleteRRS, rrs)
 				deleteNames = append(deleteNames, name)
 			}

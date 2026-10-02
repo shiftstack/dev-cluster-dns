@@ -5,18 +5,28 @@
 Creates and deletes DNS records for an OpenShift cluster in AWS route 53. Specifically it creates:
 
 - api.&lt;_cluster name_&gt;.&lt;_hosted zone_&gt;
+- api-int.&lt;_cluster name_&gt;.&lt;_hosted zone_&gt; (when using `--host`)
 - *.apps.&lt;_cluster name_&gt;.&lt;_hosted zone_&gt;
 
 By default it uses zone `Z0400818H9HMCRQLQP0V`, which is `shiftstack-dev.devcluster.openshift.com`. This can be overridden with the `--hosted-zone` option.
 
 ### Create records
 
-To create or update a record manually:
+To create or update A records for a cluster manually:
 
 ```
 $ dev-cluster-dns create my-cluster --api 192.0.2.1 --ingress 192.0.2.2
 2024/06/11 14:24:20 Base domain: shiftstack-dev.devcluster.openshift.com.
 2024/06/11 14:24:20 Create or update records: api.my-cluster.shiftstack-dev.devcluster.openshift.com. *.apps.my-cluster.shiftstack-dev.devcluster.openshift.com.
+2024/06/11 14:24:20 Status: PENDING
+```
+
+To create or update CNAME records pointing to a single host (e.g. for [SNO][sno]):
+
+```
+$ dev-cluster-dns create my-cluster --host my-host.example.com
+2024/06/11 14:24:20 Base domain: shiftstack-dev.devcluster.openshift.com.
+2024/06/11 14:24:20 Create or update records: api.my-cluster.shiftstack-dev.devcluster.openshift.com. api-int.my-cluster.shiftstack-dev.devcluster.openshift.com. *.apps.my-cluster.shiftstack-dev.devcluster.openshift.com.
 2024/06/11 14:24:20 Status: PENDING
 ```
 
@@ -34,6 +44,8 @@ Note that the base domain of the hosted cluster is added automatically.
 Note that the status is `PENDING`, meaning that the records are not published yet. Use the `--wait` flag if you need to wait until the records are published. A recommended value is 120 seconds.
 
 The default TTL for the records is 60 seconds. It can be changed with the `--ttl` flag.
+
+[sno]: https://docs.redhat.com/en/documentation/openshift_container_platform/4.22/html/installing_on_a_single_node/index
 
 ### List records
 
